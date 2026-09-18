@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GateSecAI — Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>🚧 GateSecAI</h1>
+        <nav>
+            <a href="/" class="active">Dashboard</a>
+            <a href="/register">Register (Manual)</a>
+            <a href="/scan">Scan Plate (Camera)</a>
+            <a href="/checkout">Check Out (Exit)</a>
+            <a href="/panic-alerts">🚨 Panic Alerts</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div id="panic-banner"></div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <span class="stat-number">{{ vehicles|length }}</span>
+                <span class="stat-label">Vehicles currently inside</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ today_count }}</span>
+                <span class="stat-label">Total entries today</span>
+            </div>
+        </div>
+
+        <h2>Vehicles on the premises</h2>
+        <table id="active-table">
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Plate No.</th>
+                    <th>Vehicle</th>
+                    <th>Owner</th>
+                    <th>Phone</th>
+                    <th>Visiting</th>
+                    <th>Time In</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in vehicles %}
+                <tr>
+                    <td>
+                        {% if v.photo_filename %}
+                        <img src="/captures/{{ v.photo_filename }}" class="thumb" alt="Vehicle photo">
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ v.plate_number }}</strong></td>
+                    <td>{{ v.vehicle_name }}{% if v.color %} ({{ v.color }}){% endif %}</td>
+                    <td>{{ v.owner_name }}</td>
+                    <td>{{ v.phone_number or "-" }}</td>
+                    <td>{{ v.destination or "-" }}</td>
+                    <td>{{ v.time_in.strftime("%Y-%m-%d %H:%M") }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="empty">No vehicles currently inside.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <details class="test-trigger">
+            <summary>🧪 Test tool: simulate an incoming panic SMS (no GSM hardware needed)</summary>
+            <form method="post" action="/panic-alerts/simulate" class="card-form">
+                <label>Sender Phone Number
+                    <input type="text" name="sender_number" required placeholder="e.g. 08012345678" value="08012345678">
+                </label>
+                <label>Message
+                    <input type="text" name="message" required placeholder="e.g. HELP" value="HELP">
+                </label>
+                <button type="submit">Simulate Panic SMS</button>
+            </form>
+        </details>
+    </main>
+
+    <script src="/static/script.js"></script>
+    <script>
+        startAutoRefresh("active-table", renderActiveTableRows);
+
+        async function checkPanicAlerts() {
+            try {
+                const res = await fetch("/api/panic-alerts/active");
+                const alerts = await res.json();
+                const banner = document.getElementById("panic-banner");
+                if (alerts.length > 0) {
+                    banner.innerHTML = `<div class="alert error panic-flash">
+                        🚨 ${alerts.length} ACTIVE PANIC ALERT${alerts.length > 1 ? "S" : ""} —
+                        latest from ${alerts[0].sender_number}: "${alerts[0].message}"
+                        <a href="/panic-alerts">View all →</a>
+                    </div>`;
+                } else {
+                    banner.innerHTML = "";
+                }
+            } catch (err) {
+                console.error("Panic alert check failed:", err);
+            }
+        }
+        checkPanicAlerts();
+        setInterval(checkPanicAlerts, 4000);
+    </script>
+</body>
+</html>

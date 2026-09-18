@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GateSecAI — Check Out</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>🚧 GateSecAI</h1>
+        <nav>
+            <a href="/">Dashboard</a>
+            <a href="/register">Register (Manual)</a>
+            <a href="/scan">Scan Plate (Camera)</a>
+            <a href="/checkout" class="active">Check Out (Exit)</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <h2>Vehicles Leaving</h2>
+        <p class="hint">This list updates automatically as vehicles are registered at the entry gate.</p>
+
+        {% if request.query_params.get('success') %}
+        <div class="alert success">✅ Vehicle checked out.</div>
+        {% elif request.query_params.get('error') == 'notfound' %}
+        <div class="alert error">⚠️ That vehicle was already checked out (maybe by another gate screen).</div>
+        {% endif %}
+
+        <form method="get" action="/checkout" class="search-form">
+            <input type="text" name="q" placeholder="Search by plate number..." value="{{ query }}">
+            <button type="submit">Search</button>
+            {% if query %}<a href="/checkout" class="clear-link">Clear</a>{% endif %}
+        </form>
+
+        <table id="checkout-table">
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Plate No.</th>
+                    <th>Vehicle</th>
+                    <th>Owner</th>
+                    <th>Visiting</th>
+                    <th>Time In</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in vehicles %}
+                <tr>
+                    <td>
+                        {% if v.photo_filename %}
+                        <img src="/captures/{{ v.photo_filename }}" class="thumb" alt="Vehicle photo">
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ v.plate_number }}</strong></td>
+                    <td>{{ v.vehicle_name }}{% if v.color %} ({{ v.color }}){% endif %}</td>
+                    <td>{{ v.owner_name }}</td>
+                    <td>{{ v.destination or "-" }}</td>
+                    <td>{{ v.time_in.strftime("%Y-%m-%d %H:%M") }}</td>
+                    <td>
+                        <form method="post" action="/checkout/{{ v.id }}">
+                            <button type="submit" class="checkout-btn">Check Out</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="empty">No matching vehicles currently inside.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+
+    <script src="/static/script.js"></script>
+    <script>
+        {% if not query %}
+        startAutoRefresh("checkout-table", renderCheckoutTableRows);
+        {% endif %}
+    </script>
+</body>
+</html>

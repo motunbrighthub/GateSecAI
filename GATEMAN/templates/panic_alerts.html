@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GateSecAI — Panic Alerts</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>🚧 GateSecAI</h1>
+        <nav>
+            <a href="/">Dashboard</a>
+            <a href="/register">Register (Manual)</a>
+            <a href="/scan">Scan Plate (Camera)</a>
+            <a href="/checkout">Check Out (Exit)</a>
+            <a href="/panic-alerts" class="active">🚨 Panic Alerts</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <h2>🚨 Active Panic Alerts</h2>
+        <p class="hint">Anyone can send an SMS with "HELP", "PANIC", or "SOS" to trigger an alert here — no internet or app needed on their end.</p>
+
+        {% if request.query_params.get('success') %}
+        <div class="alert success">✅ Alert marked as resolved.</div>
+        {% endif %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>From</th>
+                    <th>Message</th>
+                    <th>Received</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in alerts %}
+                <tr class="panic-row">
+                    <td><strong>{{ a.sender_number }}</strong></td>
+                    <td>{{ a.message }}</td>
+                    <td>{{ a.received_at.strftime("%Y-%m-%d %H:%M") }}</td>
+                    <td>
+                        <form method="post" action="/panic-alerts/{{ a.id }}/resolve">
+                            <button type="submit">Mark Resolved</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="empty">No active alerts. ✅</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GateSecAI — Register Vehicle</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>🚧 GateSecAI</h1>
+        <nav>
+            <a href="/">Dashboard</a>
+            <a href="/register" class="active">Register (Manual)</a>
+            <a href="/scan">Scan Plate (Camera)</a>
+            <a href="/checkout">Check Out (Exit)</a>
+        </nav>
+    </header>
+
+    <main class="container narrow">
+        <h2>Register Incoming Vehicle</h2>
+        <p class="hint">Prefer the camera? Use <a href="/scan">Scan Plate</a> to auto-read the plate instead of typing it.</p>
+
+        {% if request.query_params.get('success') %}
+        <div class="alert success">✅ Vehicle registered successfully.</div>
+        {% elif request.query_params.get('error') == 'duplicate' %}
+        <div class="alert error">⚠️ This plate number is already checked in. Check it out first if this is a re-entry.</div>
+        {% elif request.query_params.get('error') == 'blank' %}
+        <div class="alert error">⚠️ Plate number, vehicle, and owner name can't be blank.</div>
+        {% endif %}
+
+        <form method="post" action="/register" class="card-form">
+            <label>Plate Number *
+                <input type="text" name="plate_number" required placeholder="e.g. KJA-123-XY" autofocus
+                       value="{{ request.query_params.get('plate_number', '') }}">
+            </label>
+
+            <label>Vehicle (make/model) *
+                <input type="text" name="vehicle_name" required placeholder="e.g. Toyota Camry">
+            </label>
+
+            <label>Color
+                <input type="text" name="color" placeholder="e.g. Black">
+            </label>
+
+            <label>Owner / Driver Name *
+                <input type="text" name="owner_name" required placeholder="Full name">
+            </label>
+
+            <label>Phone Number
+                <input type="tel" name="phone_number" placeholder="e.g. 0803xxxxxxx">
+            </label>
+
+            <label>Visiting / Destination
+                <input type="text" name="destination" placeholder="e.g. Block C, Flat 4">
+            </label>
+
+            {% if request.query_params.get('photo_filename') %}
+            <input type="hidden" name="photo_filename" value="{{ request.query_params.get('photo_filename') }}">
+            <div class="hint">📷 Photo attached from scan.</div>
+            {% endif %}
+
+            <button type="submit">Save & Let In</button>
+        </form>
+    </main>
+</body>
+</html>

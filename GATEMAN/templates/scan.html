@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GateSecAI — Scan Plate</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>🚧 GateSecAI</h1>
+        <nav>
+            <a href="/">Dashboard</a>
+            <a href="/register">Register (Manual)</a>
+            <a href="/scan" class="active">Scan Plate (Camera)</a>
+            <a href="/checkout">Check Out (Exit)</a>
+        </nav>
+    </header>
+
+    <main class="container narrow">
+        <h2>📷 Scan Vehicle Plate</h2>
+        <p class="hint">Take a photo of the plate. This runs fully offline on this device — no internet needed.</p>
+
+        <div id="scan-card" class="card-form">
+            <!-- capture="environment" opens the REAR camera directly on phones -->
+            <label for="photo-input" class="camera-btn">📸 Take Photo</label>
+            <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none">
+
+            <div id="preview-area"></div>
+
+            <div id="status-area"></div>
+
+            <div id="result-area" style="display:none">
+                <label>Detected Plate Number (edit if needed)
+                    <input type="text" id="detected-plate" placeholder="Type manually if not detected">
+                </label>
+                <div id="confidence-note" class="hint"></div>
+                <button id="continue-btn" type="button">Continue to Registration →</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const photoInput = document.getElementById("photo-input");
+        const previewArea = document.getElementById("preview-area");
+        const statusArea = document.getElementById("status-area");
+        const resultArea = document.getElementById("result-area");
+        const detectedPlateInput = document.getElementById("detected-plate");
+        const confidenceNote = document.getElementById("confidence-note");
+        const continueBtn = document.getElementById("continue-btn");
+
+        let capturedPhotoFilename = null;
+
+        photoInput.addEventListener("change", async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Show a preview immediately so the guard sees what was captured.
+            const previewUrl = URL.createObjectURL(file);
+            previewArea.innerHTML = `<img src="${previewUrl}" class="scan-preview" alt="Captured photo">`;
+
+            resultArea.style.display = "none";
+            statusArea.innerHTML = `<div class="alert warning">🔎 Reading plate offline… this can take a few seconds.</div>`;
+
+            const formData = new FormData();
+            formData.append("photo", file);
+
+            try {
+                const res = await fetch("/api/scan-plate", { method: "POST", body: formData });
+                if (!res.ok) throw new Error("Scan failed");
+                const data = await res.json();
+
+                capturedPhotoFilename = data.photo_filename;
+                detectedPlateInput.value = data.plate_number || "";
+
+                if (data.plate_number) {
+                    const pct = Math.round(data.confidence * 100);
+                    confidenceNote.textContent = `Detected with ${pct}% confidence — please verify it's correct.`;
+                } else {
+                    confidenceNote.textContent = "Couldn't confidently read a plate — please type it manually.";
+                }
+
+                statusArea.innerHTML = "";
+                resultArea.style.display = "block";
+            } catch (err) {
+                statusArea.innerHTML = `<div class="alert error">⚠️ Scan failed. You can still register manually.</div>`;
+                console.error(err);
+            }
+        });
+
+        continueBtn.addEventListener("click", () => {
+            const plate = encodeURIComponent(detectedPlateInput.value.trim());
+            const photo = encodeURIComponent(capturedPhotoFilename || "");
+            window.location.href = `/register?plate_number=${plate}&photo_filename=${photo}`;
+        });
+    </script>
+</body>
+</html>
